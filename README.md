@@ -768,9 +768,19 @@ npm start
 1. **只从本地工作副本部署**：不要使用 GitHub 一键导入、Fork 后导入、Connect GitHub 读取仓库等流程。
 2. **Vercel**：使用本地 CLI 部署现有项目，参考官方文档：[Import an existing project](https://vercel.com/docs/getting-started-with-vercel/import)。
 3. **Cloudflare**：使用官方 **Direct Upload** 或 CLI 工作流，不要使用 Git integration，参考官方文档：[Getting started with Pages](https://developers.cloudflare.com/pages/get-started)。
-4. **Cloudflare 构建参数**：本仓库保留了 `npm run pages:build` 和 `wrangler.toml`，可继续用于现有 Cloudflare 构建链路。
-5. **功能限制**：托管平台会自动禁用外部媒体代理和 IPTV 流中继；请仅使用允许浏览器直连、允许当前来源访问且具备合法授权的内容源。
-6. **如果你需要完整能力**：直接改用 Docker 或传统 Node.js 自托管，不要在托管平台上强行恢复这些能力。
+4. **Cloudflare Direct Upload 正确流程**：
+   ```bash
+   npm install
+   npm run pages:build
+   ```
+   构建完成后，上传 **`.vercel/output/static`** 目录，而不是仓库根目录、`.next` 目录或源码文件。上传仓库根目录只会把源码当静态文件托管，根路径没有构建产物可供 Pages 入口加载，结果就是 404。
+5. **Cloudflare CLI 发布**：如果你使用 CLI，请发布同一个构建产物目录：
+   ```bash
+   npx wrangler pages deploy .vercel/output/static
+   ```
+6. **Cloudflare 构建链路**：`npm run pages:build` 现在固定使用仓库内安装的 `next-on-pages` 和兼容版本的 `vercel`，避免构建时临时拉取不受控版本。`wrangler.toml` 继续提供 `nodejs_compat` 兼容标志。
+7. **功能限制**：托管平台会自动禁用外部媒体代理和 IPTV 流中继；请仅使用允许浏览器直连、允许当前来源访问且具备合法授权的内容源。
+8. **如果你需要完整能力**：直接改用 Docker 或传统 Node.js 自托管，不要在托管平台上强行恢复这些能力。
 
 #### 选项 4：Android TV APK 构建
 
@@ -864,7 +874,14 @@ npm start
 
 ### Cloudflare 托管部署
 
-请在本地工作副本完成更新后，使用 Direct Upload 或 CLI 重新发布。不要使用 Git integration 直接读取 GitHub 仓库。
+请在本地工作副本完成更新后，重新执行：
+
+```bash
+npm install
+npm run pages:build
+```
+
+然后使用 Direct Upload 或 CLI 发布 **`.vercel/output/static`**。不要上传仓库根目录，也不要上传 `.next`，否则 Pages 只会托管源码文件，访问站点时直接 404。
 
 ### Docker 部署
 
@@ -899,6 +916,27 @@ npm start
 ### Cloudflare Pages 部署报 "Unknown internal error"
 
 这是 Cloudflare 的临时服务端错误，与代码无关。请在 Deployments 列表中重试部署即可。项目已内置 `wrangler.toml` 配置 `nodejs_compat` 兼容性标志。
+
+### Cloudflare Pages Direct Upload 部署后打开是 404
+
+这通常不是应用路由问题，而是上传了错误的目录。Cloudflare Pages 的 Direct Upload 需要上传已经构建完成的产物目录。
+
+正确做法：
+
+```bash
+npm install
+npm run pages:build
+```
+
+然后上传 **`.vercel/output/static`**。
+
+错误做法：
+
+- 上传仓库根目录
+- 上传 `.next`
+- 直接把源码压缩包丢给 Direct Upload
+
+这些做法都不会生成 Pages 可执行入口，部署成功后打开站点就会是 404。
 
 ### IPv6 环境下 HTTPS 访问视频无法播放
 
